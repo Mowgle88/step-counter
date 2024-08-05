@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'package:step_counter/permissions.dart';
 import 'package:step_counter/widgets/progress_bar.dart';
 
 class HomePage extends StatefulWidget {
@@ -13,12 +17,38 @@ class _HomePageState extends State<HomePage> {
   late int goal;
   late bool isPlay;
 
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
+
+  late StreamSubscription<AccelerometerEvent> _streamSubscription;
+
   @override
   void initState() {
     super.initState();
+    requestPermission();
+    startSubscription();
+
     steps = 15000;
     goal = 20000;
     isPlay = false;
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription.cancel();
+    super.dispose();
+  }
+
+  void startSubscription() {
+    _streamSubscription =
+        accelerometerEventStream().listen((AccelerometerEvent event) {
+      setState(() {
+        x = event.x;
+        y = event.y;
+        z = event.z;
+      });
+    });
   }
 
   @override
@@ -57,7 +87,18 @@ class _HomePageState extends State<HomePage> {
                     EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   ),
                 ),
-              )
+              ),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Text('Accelerometer Data'),
+                    Text('X: $x'),
+                    Text('Y: $y'),
+                    Text('Z: $z'),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
