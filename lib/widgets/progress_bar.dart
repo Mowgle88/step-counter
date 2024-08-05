@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:step_counter/utils/format_time.dart';
 
 class ProgressBar extends StatelessWidget {
   const ProgressBar({
     super.key,
     required this.goal,
     required this.steps,
+    required this.duration,
   });
 
   final int goal;
   final int steps;
+  final Duration? duration;
 
   @override
   Widget build(BuildContext context) {
@@ -55,28 +58,28 @@ class ProgressBar extends StatelessWidget {
           )
         ],
       ),
-      footer: const Row(
+      footer: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Column(
             children: [
-              Icon(
+              const Icon(
                 Icons.access_time,
                 size: 32,
                 color: Colors.blueGrey,
               ),
               Text(
-                "30:00",
-                style: TextStyle(fontSize: 20, color: Colors.blueGrey),
+                formatTime(duration),
+                style: const TextStyle(fontSize: 20, color: Colors.blueGrey),
               ),
-              Text(
+              const Text(
                 "min",
                 style: TextStyle(fontSize: 16, color: Colors.blueGrey),
               )
             ],
           ),
-          SizedBox(width: 60),
-          Column(
+          const SizedBox(width: 60),
+          const Column(
             children: [
               Icon(
                 Icons.route,

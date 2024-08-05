@@ -15,23 +15,42 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late int steps;
   late int goal;
-  late bool isPlay;
 
   double x = 0.0;
   double y = 0.0;
   double z = 0.0;
 
+  Duration? duration;
+  late DateTime start;
+
   late StreamSubscription<AccelerometerEvent> _streamSubscription;
+  Duration sensorInterval = SensorInterval.normalInterval;
 
   @override
   void initState() {
     super.initState();
     requestPermission();
-    startSubscription();
+    start = DateTime.now();
+
+    _streamSubscription =
+        accelerometerEventStream(samplingPeriod: sensorInterval).listen(
+      (AccelerometerEvent event) {
+        final now = event.timestamp;
+        setState(() {
+          x = event.x;
+          y = event.y;
+          z = event.z;
+
+          duration = now.difference(start);
+        });
+      },
+      onError: (error, stackTrace) {
+        print("error: $error");
+      },
+    );
 
     steps = 15000;
     goal = 20000;
-    isPlay = false;
   }
 
   @override
@@ -40,20 +59,10 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void startSubscription() {
-    _streamSubscription =
-        accelerometerEventStream().listen((AccelerometerEvent event) {
-      setState(() {
-        x = event.x;
-        y = event.y;
-        z = event.z;
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final isPaused = _streamSubscription.isPaused;
 
     return Scaffold(
       appBar: AppBar(
@@ -67,36 +76,30 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ProgressBar(goal: goal, steps: steps),
+              ProgressBar(goal: goal, steps: steps, duration: duration),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () {
                   setState(() {
-                    isPlay = !isPlay;
+                    if (isPaused) {
+                      _streamSubscription.resume();
+                      start = DateTime.now().subtract(duration!);
+                    } else {
+                      _streamSubscription.pause();
+                    }
                   });
                 },
                 label: Text(
-                  isPlay ? "pause" : "start",
+                  isPaused ? "start" : "pause",
                   style: const TextStyle(fontSize: 20),
                 ),
-                icon: Icon(isPlay ? Icons.pause : Icons.play_arrow),
+                icon: Icon(isPaused ? Icons.play_arrow : Icons.pause),
                 style: ButtonStyle(
                   backgroundColor:
                       WidgetStateProperty.all(Colors.blue.shade100),
                   padding: const WidgetStatePropertyAll(
                     EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   ),
-                ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const Text('Accelerometer Data'),
-                    Text('X: $x'),
-                    Text('Y: $y'),
-                    Text('Z: $z'),
-                  ],
                 ),
               ),
             ],
