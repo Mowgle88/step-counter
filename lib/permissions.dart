@@ -13,8 +13,9 @@ Permission getMotionPermission() {
 
 Future<void> requestPermission() async {
   final permission = getMotionPermission();
+  final isDenied = await permission.isDenied;
 
-  if (await permission.isDenied) {
+  if (isDenied) {
     await permission.request();
   }
 }

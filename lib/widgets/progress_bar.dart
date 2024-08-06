@@ -25,6 +25,7 @@ class ProgressBar extends StatelessWidget {
       arcType: ArcType.FULL,
       animation: true,
       animationDuration: 1200,
+      animateFromLastPercent: true,
       header: Padding(
         padding: const EdgeInsets.only(bottom: 20),
         child: Text('Daily Goal: ${goal.toString()}',

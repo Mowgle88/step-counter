@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:step_counter/permissions.dart';
+import 'package:step_counter/services/database_service.dart';
+import 'package:step_counter/services/key_store.dart';
 import 'package:step_counter/widgets/progress_bar.dart';
 
 class HomePage extends StatefulWidget {
@@ -13,27 +16,43 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late int steps;
-  late int goal;
+  final DatabaseService db = DatabaseService();
+
+  bool isPaused = true;
+  int goal = 5000;
+  int steps = 0;
+  Duration? duration;
+  late DateTime start;
 
   double x = 0.0;
   double y = 0.0;
   double z = 0.0;
+  double previousDistacne = 0.0;
+  double distance = 0.0;
 
-  Duration? duration;
-  late DateTime start;
-
-  late StreamSubscription<AccelerometerEvent> _streamSubscription;
+  StreamSubscription<AccelerometerEvent>? _streamSubscription;
   Duration sensorInterval = SensorInterval.normalInterval;
 
   @override
   void initState() {
     super.initState();
-    requestPermission();
-    start = DateTime.now();
 
-    _streamSubscription =
-        accelerometerEventStream(samplingPeriod: sensorInterval).listen(
+    requestPermission();
+
+    getData();
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    super.dispose();
+  }
+
+  void startListening() {
+    start =
+        DateTime.now().subtract(duration ?? const Duration(milliseconds: 0));
+
+    _streamSubscription = accelerometerEventStream().listen(
       (AccelerometerEvent event) {
         final now = event.timestamp;
         setState(() {
@@ -41,28 +60,63 @@ class _HomePageState extends State<HomePage> {
           y = event.y;
           z = event.z;
 
+          distance = getValue(x, y, z);
+          if (distance > 6) {
+            steps++;
+          }
           duration = now.difference(start);
         });
+        setData(steps, duration!);
       },
       onError: (error, stackTrace) {
-        print("error: $error");
+        print("accelerometerEventStream error: $error");
       },
     );
-
-    steps = 15000;
-    goal = 20000;
   }
 
-  @override
-  void dispose() {
-    _streamSubscription.cancel();
-    super.dispose();
+  void stopListening() {
+    _streamSubscription?.cancel();
+  }
+
+  void getData() async {
+    int goalValue = await db.getInt(KeyStore.goal) ?? 5000;
+    int stepsValue = await db.getInt(KeyStore.steps) ?? 0;
+    final milliseconds = await db.getInt(KeyStore.duration);
+    Duration durationValue = Duration(milliseconds: milliseconds ?? 0);
+    setState(() {
+      goal = goalValue;
+      steps = stepsValue;
+      duration = durationValue;
+    });
+  }
+
+  void setData(int steps, Duration dur) async {
+    await db.setInt(KeyStore.steps, steps);
+    await db.setInt(KeyStore.duration, dur.inMilliseconds);
+  }
+
+  double getValue(double x, double y, double z) {
+    double magnitude = sqrt(x * x + y * y + z * z);
+    getPreviousValue();
+    double modDistance = magnitude - previousDistacne;
+    setPreviousValue(magnitude);
+    return modDistance;
+  }
+
+  void setPreviousValue(double distance) async {
+    await db.setDouble(KeyStore.prevDistance, distance);
+  }
+
+  void getPreviousValue() async {
+    double distance = await db.getDouble(KeyStore.prevDistance) ?? 0.0;
+    setState(() {
+      previousDistacne = distance;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final isPaused = _streamSubscription.isPaused;
 
     return Scaffold(
       appBar: AppBar(
@@ -82,10 +136,11 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   setState(() {
                     if (isPaused) {
-                      _streamSubscription.resume();
-                      start = DateTime.now().subtract(duration!);
+                      startListening();
+                      isPaused = false;
                     } else {
-                      _streamSubscription.pause();
+                      stopListening();
+                      isPaused = true;
                     }
                   });
                 },
