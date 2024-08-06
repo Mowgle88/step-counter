@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final DatabaseService db = DatabaseService();
+  late TextEditingController _textController;
 
   bool isPaused = true;
   int goal = 5000;
@@ -40,11 +41,13 @@ class _HomePageState extends State<HomePage> {
     requestPermission();
 
     getData();
+    _textController = TextEditingController();
   }
 
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -95,6 +98,10 @@ class _HomePageState extends State<HomePage> {
     await db.setInt(KeyStore.duration, dur.inMilliseconds);
   }
 
+  void setGoal(int goal) async {
+    await db.setInt(KeyStore.goal, goal);
+  }
+
   double getValue(double x, double y, double z) {
     double magnitude = sqrt(x * x + y * y + z * z);
     getPreviousValue();
@@ -122,6 +129,38 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Step Counter"),
         backgroundColor: Colors.blue.shade200,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              onPressed: () {
+                showDialog<String>(
+                  context: context,
+                  builder: (BuildContext context) => AlertDialog(
+                    title: const Text('Change your daily goal'),
+                    content: TextField(
+                      controller: _textController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            goal = int.parse(_textController.text);
+                          });
+                          setGoal(int.parse(_textController.text));
+                          Navigator.pop(context, 'OK');
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: Image.asset("assets/images/goal.png"),
+            ),
+          )
+        ],
       ),
       body: SafeArea(
         child: Container(
