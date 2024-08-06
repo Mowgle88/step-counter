@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:step_counter/utils/calculate.dart';
 import 'package:step_counter/utils/format_time.dart';
 
 class ProgressBar extends StatelessWidget {
@@ -80,18 +81,18 @@ class ProgressBar extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 60),
-          const Column(
+          Column(
             children: [
-              Icon(
+              const Icon(
                 Icons.route,
                 size: 32,
                 color: Colors.blueGrey,
               ),
               Text(
-                "3.5",
-                style: TextStyle(fontSize: 20, color: Colors.blueGrey),
+                calculateStepToKm(steps).toStringAsFixed(3),
+                style: const TextStyle(fontSize: 20, color: Colors.blueGrey),
               ),
-              Text(
+              const Text(
                 "km",
                 style: TextStyle(fontSize: 16, color: Colors.blueGrey),
               )
